@@ -3,6 +3,8 @@ import socket
 # Client Side Prototype V0
 # TODO: 
 # Figure out how to send GPIO Pin Data through socks
+# Figure out how to send data at intervals
+# Decide if server will ask for data or client will send data regardless
 
 # create a socket object
 clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
