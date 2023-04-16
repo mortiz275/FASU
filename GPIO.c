@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <wiringPi.h>
+#include <windows.h>
+#include <unistd.h>
+#include <time.h>
 
 #define GPIO_PIN 1
 
@@ -13,11 +16,19 @@ int main(void) {
 
     int pinValue = digitalRead(GPIO_PIN);
 
-    if (pinValue == HIGH) {
-        printf("GPIO pin %d is receiving power\n", GPIO_PIN);
+
+    while (pinValue == HIGH) {
+        printf("GPIO pin %d is currently active.\n", GPIO_PIN);
+        // Minute long intervals between each update
+        sleep(60);
     } else {
-        printf("GPIO pin %d is not receiving power\n", GPIO_PIN);
+        time_t t;
+        time(&t);
+        // When the pin stops receiving power, this will show the exact date and time it happened.
+        printf("GPIO pin %d has went offline at %s . Please check on status.\n", GPIO_PIN, ctime(&t));
     }
+
+    // I assume from here we can then pipe these outputs to the client which will then push them to the server.
 
     return 0;
 }
