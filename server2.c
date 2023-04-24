@@ -14,50 +14,46 @@
 time_t lastPing;
 time_t lastLostCheck;
 
-//Linked list data structure to hold client ID and last ping
-typedef struct clientNode{
+//Structure to hold client ID and last ping
+typedef struct{
 	char client_id[20];
 	time_t last_ping;
-	struct clientNode *next;
-} node_t;
+}clientData;
 
-node_t *head = NULL;
+//Dynamic array to keep track of clients who have connected
+int clients = 0;
+clientData *client_data_arr;
 
-//Finds the correct client node and updates the ping
+//Finds the correct client and updates the ping
 void update_ping(char *client_id){
-	node_t *current = head;
-
-	while(current != NULL){
-		if(strcmp(current->client_id, client_id) == 0){
-			current->last_ping = time(NULL);
-			return;
+	if(clients != 0){
+		for(int i = 0; i < clients; i++){
+			if(strcmp(client_data_arr[i].client_id, client_id) == 0){
+				client_data_arr[i].last_ping = time(NULL);
+				return;
+			}
 		}
-		current = current->next;
 	}
 
-	node_t *new_node = malloc(sizeof(node_t));
-	strcpy(new_node->client_id, client_id);
-	new_node->last_ping = time(NULL);
-	new_node->next = head;
-	head = new_node;
+	//If we make it here the client isn't in the array, so we add it.
+	clientData new_client = {"", 0};
+	strcpy(new_client.client_id, client_id);
+	new_client.last_ping = time(NULL);
+
+	clients++;
+	client_data_arr = realloc(client_data_arr, clients * sizeof(clientData));
+	client_data_arr[clients - 1] = new_client;
 }
 
-//Frees the linked list when the program ends
+//Frees the array when the program ends
 void free_list(){
-	node_t *current = head;
-	
-	while(current != NULL){
-		node_t *temp = current;
-		current = current->next;
-		free(temp);
-	}
+	free(client_data_arr);	
 }
 
 //Check if the RPi is considered lost
 void check_lost(){
-	node_t *current = head;
-	while(current != NULL){
-		if(difftime(time(NULL), current->last_ping) > LOST_THRESHOLD){
+	for(int i = 0; i < clients; i++){
+		if(difftime(time(NULL), client_data_arr[i].last_ping) > LOST_THRESHOLD){
 			time_t current_time;
 			struct tm * time_info;
 			char time_string[30];
@@ -66,9 +62,8 @@ void check_lost(){
 			time_info = localtime(&current_time);
 			strftime(time_string, sizeof(time_string), "[%a %b %d %Y %H:%M:%S]", time_info);
 
-			printf("\033[33m%s Warning: %s has not been communicating!\n", time_string, current->client_id);
+			printf("\033[0;33m%s Warning: %s has not been communicating!\n", time_string, client_data_arr[i].client_id);
 		}
-		current = current->next;
 	}
 }
 
@@ -155,6 +150,7 @@ void *the_listener(void *arg){
 
 //Main function to make a thread for the listener and to determine when to check for lost RPis
 int main(int argc, char const *argv[]){
+	client_data_arr = malloc(clients * sizeof(clientData));
 	lastPing = time(NULL);
 	lastLostCheck = time(NULL);
 
@@ -169,10 +165,8 @@ int main(int argc, char const *argv[]){
 	}
 
 	while(1){
-		if(difftime(time(NULL), lastLostCheck) > LOST_INTERVAL){
-			check_lost();
-			lastLostCheck = time(NULL);
-		}
+		sleep(LOST_INTERVAL);
+		check_lost();
 	}
 	return 0;
 }
