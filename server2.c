@@ -7,9 +7,23 @@
 #include <pthread.h>
 #include <time.h>
 
-#define PORT 8080 //Port Number
-#define LOST_INTERVAL 10 //Time (seconds) to wait before checking if RPis are lost
-#define LOST_THRESHOLD 5 //Time (seconds) allowed to pass before RPis are considered lost
+/*
+ * ALARM PROJECT SERVER CODE 
+ * Change the following define statements to desired settings
+ *
+ * After saving the file, run the following command to apply changes:
+ * "gcc -o server server.c -pthread"
+ *
+ * Start the client by running the following command:
+ * "./server"
+ */
+
+//Port number (make sure all clients match the server)
+#define PORT 8080 
+//Time (seconds) to wait before checking if RPis are lost
+#define LOST_INTERVAL 15 
+//Time (seconds) allowed to pass before RPis are considered lost
+#define LOST_THRESHOLD 10 
 
 time_t lastPing;
 time_t lastLostCheck;
@@ -62,13 +76,13 @@ void check_lost(){
 			time_info = localtime(&current_time);
 			strftime(time_string, sizeof(time_string), "[%a %b %d %Y %H:%M:%S]", time_info);
 
-			printf("\033[0;33m%s Warning: %s has not been communicating!\n", time_string, client_data_arr[i].client_id);
+			printf("\033[0;35m%s Warning: %s has not been communicating!\n", time_string, client_data_arr[i].client_id);
+            printf("\a");
 		}
 	}
 }
 
 //Function that runs when a connection is received. Prints the status code and is color coordinated
-//TODO: Color coordination is kind of jank. Will be fixed in the future
 void *handle_client(void *arg){
 	int new_socket = *(int *)arg;
 	char buffer[1024] = {0};
@@ -89,11 +103,19 @@ void *handle_client(void *arg){
 		printf("\033[0;32m%s Received message from: %s status OK\n", time_string, &buffer[1]);
 	}else if(buffer[0] == 'F'){
 		printf("\033[1;31m%s Received message from: %s status FIRE\n", time_string, &buffer[1]);
+        printf("\a");
 	}else if(buffer[0] == 'W'){
 		printf("\033[1;34m%s Received message from: %s status FLOOD\n", time_string, &buffer[1]);
-	}else{
-		printf("\033[0;33m%s Warning: Message from %s does not contain a valid status!\n", time_string, &buffer[1]);
+        printf("\a");
+    }else if(buffer[0] == 'B'){
+		printf("\033[1;33m%s Received message from: %s status BURGLAR\n", time_string, &buffer[1]);
+        printf("\a");
 	}
+    else{
+        printf("\033[0;35m%s Warning: Message from %s does not contain a valid status!\n", time_string, &buffer[1]);
+        printf("\a");
+    }
+    printf("\033[0m\n");
 
 	send(new_socket, received, strlen(received), 0);
 	close(new_socket);
@@ -155,8 +177,6 @@ int main(int argc, char const *argv[]){
 	lastLostCheck = time(NULL);
 
 	atexit(free_list);
-
-	
 
 	pthread_t listener;
 	if(pthread_create(&listener, NULL, the_listener, NULL) != 0){
