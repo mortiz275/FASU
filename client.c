@@ -1,9 +1,9 @@
+#include <pigpio.h>
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <pigpio.h>
 
 /*
  * ALARM PROJECT CLIENT CODE 
@@ -42,29 +42,28 @@ int main(int argc, char const* argv[]){
     //Set up GPIO
     if(gpioInitialise() < 0){
         fprintf(stderr, "Failed to initialise GPIO pins\n");
-        exit(EXIT_FAILURE);
     }
 
     gpioSetMode(GPIO_PIN_FIRE, PI_INPUT);
     gpioSetMode(GPIO_PIN_WATER, PI_INPUT);
     gpioSetMode(GPIO_PIN_BURGLARY, PI_INPUT);
 
-    //Create socket
-    if((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
-        printf("Socket creation error\n");
-        return -1;
-    }
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
-
-    if(inet_pton(AF_INET, IP_ADDRESS, &serv_addr.sin_addr) <= 0){
-        printf("Invalid address\n");
-        return -1;
-    }
-
     //Continue to connect and send status messages
     while(1){
+	    //Create socket
+	    if((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+		printf("Socket creation error\n");
+		return -1;
+	    }
+
+	    serv_addr.sin_family = AF_INET;
+	    serv_addr.sin_port = htons(PORT);
+
+	    if(inet_pton(AF_INET, IP_ADDRESS, &serv_addr.sin_addr) <= 0){
+		printf("Invalid address\n");
+		return -1;
+	    }
+
 
         if((status = connect(client_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))) < 0){
             printf("Connection failed\n");
